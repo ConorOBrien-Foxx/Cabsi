@@ -61,7 +61,7 @@ const Instructions = {
 };
 
 const tokenize = code => {
-    let parsed = code.split("\n")
+    let parsed = code.split(/\r?\n/)
         .map(line => line.match(/(\d+)\s*(.*?)(?:\s*REM .*)?$/))
         .filter(line => !!line);
     let result = {};
@@ -376,32 +376,21 @@ class CabsiInterpreter {
     }
 }
 
-const prog = `
-10 PUSH 7
-20 GOSUB 100
-30 DUP
-40 GOSUB 100
-50 DEBUG
-60 EXIT
-100 REM Fibonacci n -- n'
-110 PUSH 0, 1
-120 ROT
-130 JNP 220
-140 DEC
-150 ROT
-160 ROT
-170 DUP
-180 ROT
-190 ADD
-200 ROT
-210 GOTO 130
-220 POP
-230 POP
-240 RETURN
-`.trim();
-
-(async function main() {
-    let end = await CabsiInterpreter.interpret(prog);
-
-    // console.log(end);
-})();
+// TODO: Cabsi-written libraries
+// TODO: JS-written extensions
+// TODO: loading/executing other files? GOTO File.Line?
+// TODO: GOTO top of stack? stack stored somewhere "in program"? GOTO -1 means TOS? dunno
+if(typeof require !== "undefined") {
+    const argv = require("minimist")(process.argv.slice(2), {
+        alias: {
+            help: "h",
+        }
+    });
+    // TODO: help for when there's more command line arguments
+    const fileName = argv._[0];
+    const fs = require("fs");
+    const program = fs.readFileSync(fileName).toString();
+    CabsiInterpreter.interpret(program).then(() => {
+        // stuff to do after interpretation
+    });
+}
