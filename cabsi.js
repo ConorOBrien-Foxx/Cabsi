@@ -30,6 +30,8 @@ const Instructions = {
     // stack population
     PUSH: 1,
     INPUT: 2,
+    GETC: 3, // get character
+    GETL: 4, // get line
     // stack manipulation
     ROT: 10,    // A B C -> B C A
     DUP: 11,
@@ -54,10 +56,14 @@ const Instructions = {
     DIV: 35,
     MOD: 36,
     DIVMOD: 37,
+    // type conversion
+    MAKEI: 50, // make integer
+    MAKES: 51, // make string
     // misc
-    DEBUG: 50,
-    EXIT: 51,
-    PRINT: 52,
+    DEBUG: 90,
+    EXIT: 91,
+    PRINT: 92,
+    
 };
 
 const tokenize = code => {
@@ -121,18 +127,46 @@ class CabsiInterpreter {
         // console.log(this.token.line, this.stack);
     }
     
-    async getInput(prompt="> ") {
-        if(!this.readline) {
-            this.readline = require("node:readline/promises");
-            const { stdin: input, stdout: output } = require('node:process');
-            this.rl = this.readline.createInterface({ input, output, terminal: false });
+    // template function: can be replaced if implemented with equivalent behavior
+    async getChar() {
+        const fs = require("fs");
+        let buffer = Buffer.alloc(1);
+        let bytesRead = fs.readSync(0, buffer, 0, 1);
+        
+        if(!bytesRead) {
+            return null;
         }
+        else {
+            return buffer.toString("utf8");
+        }
+    }
+    
+    // template function: can be replaced if implemented with equivalent behavior
+    async readline() {
+        let chr, line = "";
+        while(chr !== "\n") {
+            chr = await this.getChar();
+            if(chr === null) {
+                break;
+            }
+            line += chr;
+        }
+        return line;
+    }
+    
+    // template function: can be replaced if implemented with equivalent behavior
+    async write(arg) {
+        return process.stdout.write(arg);
+    }
+    
+    async getInput(prompt="> ") {
         if(typeof process !== "undefined" && !process.stdin.isTTY) {
             // do not show input prompt when reading from a pipe
             prompt = "";
         }
-        const answer = await this.rl.question(prompt);
-        return this.parseLiteral(answer);
+        await this.write(prompt);
+        let answer = await this.readline();
+        return this.parseLiteral(answer.trim());
     }
     
     parseLiteral(raw) {
@@ -202,6 +236,10 @@ class CabsiInterpreter {
             const prompt = this.stack.pop();
             const input = await this.getInput(prompt);
             this.push(input);
+        },
+        async [Instructions.GETC]() {
+            const chr = await this.getChar();
+            this.push(chr);
         },
         [Instructions.GOTO]() {
             const targetLine = parseInt(this.token.params[0], 10);

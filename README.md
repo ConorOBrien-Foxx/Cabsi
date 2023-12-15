@@ -45,6 +45,12 @@ Pushes 0 or more items to the stack in sequence.
 #### `INPUT`(1 &rarr; 1)
 Pops a prompt string `S` and asks the user for input with `S`. Pushes the corresponding literal onto the stack. Prompt string not displayed (but still required) when not reading from the user's keyboard.
 
+#### `GETC`(0 &rarr; 1)
+Reads a character from STDIN.
+
+#### `GETL`(0 &rarr; 1)
+Reads a line from STDIN.
+
 ### Stack Manipulation
 
 #### `ROT`(3 &rarr; 3)
