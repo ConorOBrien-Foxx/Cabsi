@@ -32,6 +32,7 @@ const Instructions = {
     INPUT: 2,
     GETC: 3, // get character
     GETL: 4, // get line
+    GETW: 5, // get word
     // stack manipulation
     ROT: 10,    // A B C -> B C A
     DUP: 11,
@@ -58,12 +59,12 @@ const Instructions = {
     DIVMOD: 37,
     // type conversion
     MAKEI: 50, // make integer
-    MAKES: 51, // make string
+    MAKEF: 51, // make float
+    MAKES: 52, // make string
     // misc
     DEBUG: 90,
     EXIT: 91,
     PRINT: 92,
-    
 };
 
 const tokenize = code => {
@@ -103,6 +104,7 @@ class CabsiInterpreter {
         this.tokens.forEach((token, idx) => {
             this.lineNumberToIndexMap[token.lineNumber] = idx;
         });
+        this.inputBuffer = [];
     }
     
     hasStackSize(n) {
@@ -129,9 +131,12 @@ class CabsiInterpreter {
     
     // template function: can be replaced if implemented with equivalent behavior
     async getChar() {
-        const fs = require("fs");
+        if(this.inputBuffer.length) {
+            return this.inputBuffer.pop();
+        }
+        this.fs ??= require("fs");
         let buffer = Buffer.alloc(1);
-        let bytesRead = fs.readSync(0, buffer, 0, 1);
+        let bytesRead = this.fs.readSync(0, buffer, 0, 1);
         
         if(!bytesRead) {
             return null;
@@ -139,6 +144,11 @@ class CabsiInterpreter {
         else {
             return buffer.toString("utf8");
         }
+    }
+    
+    // used for unbuffering to replicate certain C utils
+    async ungetChar(chr) {
+        this.inputBuffer.push(chr);
     }
     
     // template function: can be replaced if implemented with equivalent behavior
@@ -167,6 +177,21 @@ class CabsiInterpreter {
         await this.write(prompt);
         let answer = await this.readline();
         return this.parseLiteral(answer.trim());
+    }
+    
+    async getWord() {
+        let chr, word = "";
+        while(/\s/.test(chr = await this.getChar())) {
+            // skip leading whitespace, if any
+        }
+        word += chr;
+        while((chr = await this.getChar()) !== null && !/\s/.test(chr)) {
+            word += chr;
+        }
+        if(chr) {
+            await this.ungetChar(chr);
+        }
+        return word;
     }
     
     parseLiteral(raw) {
@@ -240,6 +265,48 @@ class CabsiInterpreter {
         async [Instructions.GETC]() {
             const chr = await this.getChar();
             this.push(chr);
+        },
+        async [Instructions.GETL]() {
+            const line = await this.readline();
+            this.push(line);
+        },
+        async [Instructions.GETW]() {
+            const word = await this.getWord();
+            this.push(word);
+        },
+        [Instructions.MAKEI]() {
+            if(!this.hasStackSize(1)) {
+                return;
+            }
+            let top = this.stack.pop();
+            let result;
+            if(typeof top === "string") {
+                result = parseInt(top, 10);
+            }
+            else {
+                result = Math.trunc(result);
+            }
+            this.push(result);
+        },
+        [Instructions.MAKEF]() {
+            if(!this.hasStackSize(1)) {
+                return;
+            }
+            let top = this.stack.pop();
+            let result;
+            if(typeof top === "string") {
+                result = parseFloat(top);
+            }
+            else {
+                // result = result * 1.0; // js doesn't care lol
+            }
+            this.push(result);
+        },
+        [Instructions.MAKES]() {
+            if(!this.hasStackSize(1)) {
+                return;
+            }
+            this.push(this.stack.pop().toString());
         },
         [Instructions.GOTO]() {
             const targetLine = parseInt(this.token.params[0], 10);

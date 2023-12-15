@@ -51,6 +51,9 @@ Reads a character from STDIN.
 #### `GETL`(0 &rarr; 1)
 Reads a line from STDIN.
 
+#### `GETW`(0 &rarr; 1)
+Reads a word from STDIN (works like C's `scanf(" %s", &buf)`, obviously without the buffer overflow exploit).
+
 ### Stack Manipulation
 
 #### `ROT`(3 &rarr; 3)
@@ -119,6 +122,20 @@ Calculates the remainder of the division of the second item on the stack by the 
 
 #### `DIVMOD`(2 &rarr; 2)
 Calculates both the quotient and remainder of the division of the second item on the stack by the top item, pushing them sequentially
+
+### Type Conversion
+
+#### `MAKEI`(1 &rarr; 1)
+
+Convers the top element on the stack to an integer.
+
+#### `MAKEF`(1 &rarr; 1)
+
+Convers the top element on the stack to a floating point number.
+
+#### `MAKES`(1 &rarr; 1)
+
+Convers the top element on the stack to a string.
 
 ### Miscellaneous
 
