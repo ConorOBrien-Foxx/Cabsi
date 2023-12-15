@@ -36,6 +36,10 @@ A stack-based language with BASIC-esque instruction numbering and control flow.
    - E.g. `GOTO lineNumber` expects a numeric word `lineNumber` following `GOTO`, like `GOTO 500`.
 - The numbers in parentheses after the command denotes how many items on the stack are required for a successful execution, and how many items are left on the stack relative to that
    - E.g. `INPUT`(1 &rarr; 1) requires the stack to have at least item, and leaves the stack with 1 item, relatively speaking.
+- A stack reference expression (`@N` or `$N`), when applicable, is an index situated at the top of the stack.
+   - `@1` means top of stack, `@2` means second to top of stack, etc.
+   - For a stack `[9 3 1 6]`, `@1` is `6`, `@2` is `1`, `@3` is `3`, and `@4` is `9`.
+   - `$N` has the same indexing structure, but pops the relevant item
 
 ### Stack Population
 
@@ -73,8 +77,13 @@ Copies the second item from the top and pushes it onto the top of the stack.
 
 ### Control Flow
 
+`lineNumber` can also be a stack reference expression.
+
 #### `GOTO lineNumber`(0 &rarr; 0)
 Unconditionally jumps to the instruction at the specified `lineNumber`.
+
+#### `JNL lineNumber`(1 &rarr; 1/0)
+Jumps to the instruction at the specified `lineNumber` if the top item on the stack is `null`. If `null`, the `null` is popped.
 
 #### `JP lineNumber`(0 &rarr; 0)
 Jumps to the instruction at the specified `lineNumber` if the top item on the stack is positive.
@@ -136,6 +145,28 @@ Convers the top element on the stack to a floating point number.
 #### `MAKES`(1 &rarr; 1)
 
 Convers the top element on the stack to a string.
+
+### Comparison
+
+#### `EQ`(2 &rarr; 1)
+
+Compares the top two elements of the stack for equality.
+
+#### `LESS`(2 &rarr; 1)
+
+Compares if the element second from the top of the stack is less than the top of the stack.
+
+#### `MORE`(2 &rarr; 1)
+
+Compares if the element second from the top of the stack is more than the top of the stack.
+
+#### `LESSEQ`(2 &rarr; 1)
+
+Compares if the element second from the top of the stack is less than or equal to the top of the stack.
+
+#### `MOREEQ`(2 &rarr; 1)
+
+Compares if the element second from the top of the stack is more than or equal to the top of the stack.
 
 ### Miscellaneous
 

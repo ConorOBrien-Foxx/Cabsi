@@ -48,6 +48,7 @@ const Instructions = {
     JZ: 25, // jump zero
     GOSUB: 26, // go to subroutine
     RETURN: 27, // return from subroutine
+    JNL: 28, // jump if null
     // math
     INC: 30, // increment
     DEC: 31, // decrement
@@ -61,6 +62,12 @@ const Instructions = {
     MAKEI: 50, // make integer
     MAKEF: 51, // make float
     MAKES: 52, // make string
+    ORD: 53, // char -> value
+    CHR: 54, // value -> char
+    // comparison
+    EQ: 60, // equal
+    LESS: 61, // less
+    MORE: 62, // more
     // misc
     DEBUG: 90,
     EXIT: 91,
@@ -69,7 +76,7 @@ const Instructions = {
 
 const tokenize = code => {
     let parsed = code.split(/\r?\n/)
-        .map(line => line.match(/(\d+)\s*(.*?)(?:\s*REM .*)?$/))
+        .map(line => line.match(/^\s*(\d+)\s*(.*?)(?:\s*REM .*)?$/))
         .filter(line => !!line);
     let result = {};
     for(let [ match, lineNumber, line ] of parsed) {
@@ -184,6 +191,9 @@ class CabsiInterpreter {
         while(/\s/.test(chr = await this.getChar())) {
             // skip leading whitespace, if any
         }
+        if(!chr) {
+            return null;
+        }
         word += chr;
         while((chr = await this.getChar()) !== null && !/\s/.test(chr)) {
             word += chr;
@@ -206,6 +216,34 @@ class CabsiInterpreter {
         while(this.iptr < this.tokens.length) {
             await this.step();
         }
+    }
+    
+    parseReferenceExpression(expression) {
+        let pops;
+        if(expression.startsWith("@")) {
+            pops = false;
+        }
+        else if(expression.startsWith("$")) {
+            pops = true;
+        }
+        else {
+            return expression;
+        }
+        const index = parseInt(expression.slice(1), 10);
+        if(Number.isNaN(index) || index <= 0 || index > this.stack.length) {
+            return;
+        }
+        return pops
+            ? this.stack.splice(-index, 1)[0]
+            : this.stack.at(-index);
+    }
+    
+    parseLineNumber(str) {
+        let parsed = this.parseReferenceExpression(str);
+        if(typeof parsed === "string") {
+            parsed = parseInt(parsed, 10);
+        }
+        return parsed;
     }
     
     jumpToLine(lineNumber, decrement=true) {
@@ -308,12 +346,24 @@ class CabsiInterpreter {
             }
             this.push(this.stack.pop().toString());
         },
+        [Instructions.ORD]() {
+            if(!this.hasStackSize(1)) {
+                return;
+            }
+            this.push(this.stack.pop().codePointAt(0));
+        },
+        [Instructions.CHR]() {
+            if(!this.hasStackSize(1)) {
+                return;
+            }
+            this.push(String.fromCharCode(this.stack.pop()));
+        },
         [Instructions.GOTO]() {
-            const targetLine = parseInt(this.token.params[0], 10);
+            const targetLine = this.parseLineNumber(this.token.params[0]);
             this.jumpToLine(targetLine);
         },
         [Instructions.GOSUB]() {
-            const targetLine = parseInt(this.token.params[0], 10);
+            const targetLine = this.parseLineNumber(this.token.params[0]);
             const myLine = this.token.lineNumber;
             this.callStack.push(myLine);
             this.jumpToLine(targetLine);
@@ -334,12 +384,22 @@ class CabsiInterpreter {
             let [ a, b ] = this.stack.splice(-2);
             this.push(b, a);
         },
+        [Instructions.JNL]() {
+            if(!this.hasStackSize(1)) {
+                return;
+            }
+            const targetLine = this.parseLineNumber(this.token.params[0]);
+            if(this.stack.at(-1) === null) {
+                this.stack.pop();
+                this.jumpToLine(targetLine);
+            }
+        },
         [Instructions.JP]() {
             if(!this.hasStackSize(1)) {
                 return;
             }
+            const targetLine = this.parseLineNumber(this.token.params[0]);
             if(this.stack.at(-1) > 0) {
-                const targetLine = parseInt(this.token.params[0], 10);
                 this.jumpToLine(targetLine);
             }
         },
@@ -347,8 +407,8 @@ class CabsiInterpreter {
             if(!this.hasStackSize(1)) {
                 return;
             }
+            const targetLine = this.parseLineNumber(this.token.params[0]);
             if(this.stack.at(-1) <= 0) {
-                const targetLine = parseInt(this.token.params[0], 10);
                 this.jumpToLine(targetLine);
             }
         },
@@ -356,8 +416,8 @@ class CabsiInterpreter {
             if(!this.hasStackSize(1)) {
                 return;
             }
+            const targetLine = this.parseLineNumber(this.token.params[0]);
             if(this.stack.at(-1) < 0) {
-                const targetLine = parseInt(this.token.params[0], 10);
                 this.jumpToLine(targetLine);
             }
         },
@@ -365,8 +425,8 @@ class CabsiInterpreter {
             if(!this.hasStackSize(1)) {
                 return;
             }
+            const targetLine = this.parseLineNumber(this.token.params[0]);
             if(this.stack.at(-1) >= 0) {
-                const targetLine = parseInt(this.token.params[0], 10);
                 this.jumpToLine(targetLine);
             }
         },
@@ -374,8 +434,8 @@ class CabsiInterpreter {
             if(!this.hasStackSize(1)) {
                 return;
             }
+            const targetLine = this.parseLineNumber(this.token.params[0]);
             if(this.stack.at(-1) == 0) {
-                const targetLine = parseInt(this.token.params[0], 10);
                 this.jumpToLine(targetLine);
             }
         },
@@ -452,6 +512,41 @@ class CabsiInterpreter {
             let [ a, b ] = this.stack.splice(-2);
             this.push(a / b);
             this.push(a % b);
+        },
+        [Instructions.EQ]() {
+            if(!this.hasStackSize(2)) {
+                return;
+            }
+            let [ a, b ] = this.stack.splice(-2);
+            this.push(+(a === b));
+        },
+        [Instructions.LESS]() {
+            if(!this.hasStackSize(2)) {
+                return;
+            }
+            let [ a, b ] = this.stack.splice(-2);
+            this.push(+(a < b));
+        },
+        [Instructions.MORE]() {
+            if(!this.hasStackSize(2)) {
+                return;
+            }
+            let [ a, b ] = this.stack.splice(-2);
+            this.push(+(a > b));
+        },
+        [Instructions.LESSEQ]() {
+            if(!this.hasStackSize(2)) {
+                return;
+            }
+            let [ a, b ] = this.stack.splice(-2);
+            this.push(+(a <= b));
+        },
+        [Instructions.MOREEQ]() {
+            if(!this.hasStackSize(2)) {
+                return;
+            }
+            let [ a, b ] = this.stack.splice(-2);
+            this.push(+(a >= b));
         },
         [Instructions.PRINT]() {
             if(!this.hasStackSize(1)) {
