@@ -58,6 +58,12 @@ Reads a line from STDIN.
 #### `GETW`(0 &rarr; 1)
 Reads a word from STDIN (works like C's `scanf(" %s", &buf)`, obviously without the buffer overflow exploit).
 
+#### `SIZE`(0 &rarr; 1)
+Pushes the size of the primary stack.
+
+#### `RSIZE`(0 &rarr; 1)
+Pushes the size of the secondary stack.
+
 ### Stack Manipulation
 
 #### `ROT`(3 &rarr; 3)

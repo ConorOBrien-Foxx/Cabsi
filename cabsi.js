@@ -33,6 +33,8 @@ const Instructions = {
     GETC: 3, // get character
     GETL: 4, // get line
     GETW: 5, // get word
+    SIZE: 6, // stack size
+    RSIZE: 7, // register stack size
     // stack manipulation
     ROT: 10, // A B C -> B C A
     DUP: 11, // A -> A A
@@ -330,6 +332,12 @@ class CabsiInterpreter {
         async [Instructions.GETW]() {
             const word = await this.getWord();
             this.push(word);
+        },
+        [Instructions.SIZE]() {
+            this.push(this.stack.length);
+        },
+        [Instructions.RSIZE]() {
+            this.push(this.registerStack.length);
         },
         [Instructions.MAKEI]() {
             if(!this.hasStackSize(1)) {
