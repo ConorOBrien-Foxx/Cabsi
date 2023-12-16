@@ -34,11 +34,13 @@ const Instructions = {
     GETL: 4, // get line
     GETW: 5, // get word
     // stack manipulation
-    ROT: 10,    // A B C -> B C A
-    DUP: 11,
-    POP: 12,
-    SWAP: 13,
-    OVER: 14,
+    ROT: 10, // A B C -> B C A
+    DUP: 11, // A -> A A
+    POP: 12, // A B -> A
+    SWAP: 13, // A B -> B A
+    OVER: 14, // A B -> A B A
+    YEET: 15, // push to other stack
+    YOINK: 16, // pop from other stack
     // control flow
     GOTO: 20,
     JP: 21, // jump positive
@@ -107,6 +109,7 @@ class CabsiInterpreter {
         this.iptr = 0;
         this.stack = [];
         this.callStack = [];
+        this.registerStack = [];
         this.lineNumberToIndexMap = {};
         this.tokens.forEach((token, idx) => {
             this.lineNumberToIndexMap[token.lineNumber] = idx;
@@ -114,9 +117,22 @@ class CabsiInterpreter {
         this.inputBuffer = [];
     }
     
+    error(message) {
+        console.error(`${this.token.instruction}@${this.token.lineNumber}: ${message}`);
+    }
+    
     hasStackSize(n) {
         if(this.stack.length < n) {
-            console.error(`${this.token.instruction}@${this.token.lineNumber}: Expected ${n} entries on stack, got ${this.stack.length}`);
+            this.error(`Expected ${n} entries on stack, got ${this.stack.length}`);
+            this.kill();
+            return false;
+        }
+        return true;
+    }
+    
+    hasRegisterStackSize(n) {
+        if(this.registerStack.length < n) {
+            this.error(`Expected ${n} entries on register stack, got ${this.registerStack.length}`);
             this.kill();
             return false;
         }
@@ -205,7 +221,7 @@ class CabsiInterpreter {
     }
     
     parseLiteral(raw) {
-        return JSON.parse(raw);
+        return raw === "NULL" ? null : JSON.parse(raw);
     }
     
     push(...args) {
@@ -267,6 +283,9 @@ class CabsiInterpreter {
                     if(left === 0 && right === 0) {
                         resultIndex = 0;
                         break;
+                    }
+                    else if(left === this.tokens.length - 1 && right === left) {
+                        resultIndex = this.tokens.length;
                     }
                     left = middle + 1;
                 }
@@ -374,7 +393,7 @@ class CabsiInterpreter {
         },
         [Instructions.DEBUG]() {
             let { lineNumber, instruction } = this.token;
-            console.log(`${lineNumber} ${instruction}`, this.stack);
+            console.log(`${lineNumber} ${instruction}`, this.stack, "/", this.registerStack);
             // console.log(`${lineNumber} ${instruction} @ [ ${this.stack.join(" ")} ]`);
         },
         [Instructions.SWAP]() {
@@ -383,6 +402,24 @@ class CabsiInterpreter {
             }
             let [ a, b ] = this.stack.splice(-2);
             this.push(b, a);
+        },
+        [Instructions.OVER]() {
+            if(!this.hasStackSize(2)) {
+                return;
+            }
+            this.push(this.stack.at(-2));
+        },
+        [Instructions.YEET]() {
+            if(!this.hasStackSize(1)) {
+                return;
+            }
+            this.registerStack.push(this.stack.pop());
+        },
+        [Instructions.YOINK]() {
+            if(!this.hasRegisterStackSize(1)) {
+                return;
+            }
+            this.push(this.registerStack.pop());
         },
         [Instructions.JNL]() {
             if(!this.hasStackSize(1)) {

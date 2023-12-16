@@ -75,6 +75,12 @@ Swaps the positions of the top two items on the stack.
 #### `OVER`(2 &rarr; 3)
 Copies the second item from the top and pushes it onto the top of the stack.
 
+#### `YEET`(1 &rarr; 0)
+Pops an element from the current stack onto the register stack.
+
+#### `YOINK`(0 &rarr; 1)
+Pops an element from the register stack onto the current stack.
+
 ### Control Flow
 
 `lineNumber` can also be a stack reference expression.
