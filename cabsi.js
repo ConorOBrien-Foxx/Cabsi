@@ -639,3 +639,10 @@ if(typeof require !== "undefined") {
         // stuff to do after interpretation
     });
 }
+
+// browser
+if(typeof window !== "undefined") {
+    window.addEventListener("load", function () {
+        
+    });
+}
