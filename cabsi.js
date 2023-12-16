@@ -117,6 +117,7 @@ class CabsiInterpreter {
             this.lineNumberToIndexMap[token.lineNumber] = idx;
         });
         this.inputBuffer = [];
+        this.instructionMap = {};
     }
     
     error(message) {
@@ -143,7 +144,7 @@ class CabsiInterpreter {
     
     async step() {
         this.token = this.tokens[this.iptr];
-        let fn = CabsiInterpreter.InstructionMap[this.token.id];
+        let fn = this.instructionMap[this.token.id] ?? CabsiInterpreter.InstructionMap[this.token.id];
         if(fn) {
             await fn.call(this);
         }
@@ -154,11 +155,9 @@ class CabsiInterpreter {
         // console.log(this.token.line, this.stack);
     }
     
+    
     // template function: can be replaced if implemented with equivalent behavior
-    async getChar() {
-        if(this.inputBuffer.length) {
-            return this.inputBuffer.pop();
-        }
+    async _getCharRaw() {
         this.fs ??= require("fs");
         let buffer = Buffer.alloc(1);
         let bytesRead = this.fs.readSync(0, buffer, 0, 1);
@@ -171,12 +170,19 @@ class CabsiInterpreter {
         }
     }
     
+    // reads a char from buffer, or from _getCharRaw()
+    async getChar() {
+        if(this.inputBuffer.length) {
+            return this.inputBuffer.pop();
+        }
+        return this._getCharRaw();
+    }
+    
     // used for unbuffering to replicate certain C utils
     async ungetChar(chr) {
         this.inputBuffer.push(chr);
     }
     
-    // template function: can be replaced if implemented with equivalent behavior
     async readline() {
         let chr, line = "";
         while(chr !== "\n") {
@@ -305,6 +311,19 @@ class CabsiInterpreter {
         }
         
         this.iptr = resultIndex;
+    }
+    
+    useStringInput(stdin) {
+        let iptr = 0;
+        this._getCharRaw = async () => {
+            return stdin[iptr++] ?? null;
+        };
+    }
+    
+    useFunctionOutput(outputFn) {
+        this.write = async (...args) => {
+            return await outputFn(...args);
+        };
     }
     
     static InstructionMap = {
@@ -643,6 +662,37 @@ if(typeof require !== "undefined") {
 // browser
 if(typeof window !== "undefined") {
     window.addEventListener("load", function () {
+        const runButton = document.getElementById("runButton");
+        const codeInput = document.getElementById("codeInput");
+        const stdin = document.getElementById("stdin");
+        const stdout = document.getElementById("stdout");
+        const stdoutLabel = document.querySelector("label[for=stdout]");
+        const resizeStdout = () => {
+            M.textareaAutoResize(stdout);
+            stdoutLabel.classList.toggle("active", !!stdout.value.length);
+        };
+        const formatStack = stack => `[${stack.join(", ")}]`;
         
+        stdout.value = "";
+        resizeStdout();
+        
+        runButton.addEventListener("click", async function () {
+            stdout.value = "";
+            const interpreter = CabsiInterpreter.fromString(codeInput.value);
+            // set browser configuration
+            interpreter.useStringInput(stdin.value);
+            interpreter.useFunctionOutput(arg => {
+                stdout.value += arg;
+                resizeStdout();
+            });
+            interpreter.instructionMap[Instructions.DEBUG] = function () {
+                let { lineNumber, instruction } = this.token;
+                this.write(`${lineNumber} ${instruction} ${formatStack(this.stack)} / ${formatStack(this.registerStack)}\n`);
+            };
+            // run and kill
+            // TODO: not-busy-run
+            await interpreter.run();
+            interpreter.kill();
+        });
     });
 }

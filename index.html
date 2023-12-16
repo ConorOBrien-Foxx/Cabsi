@@ -21,8 +21,8 @@
     <div class="row">
       <div class="col s12">
         <div class="input-field">
-          <textarea class="materialize-textarea"></textarea>
-          <label for="textarea1">Code</label>
+          <textarea id="codeInput" class="materialize-textarea"></textarea>
+          <label for="codeInput">Code</label>
         </div>
       </div>
     </div>
@@ -30,8 +30,8 @@
     <div class="row">
       <div class="col s12">
         <div class="input-field">
-          <textarea class="materialize-textarea"></textarea>
-          <label for="textarea2">STDIN</label>
+          <textarea id="stdin" class="materialize-textarea"></textarea>
+          <label for="stdin">STDIN</label>
         </div>
       </div>
     </div>
@@ -39,6 +39,15 @@
     <button class="btn waves-effect waves-light" id="runButton">
       <i class="material-icons left">start</i> Run
     </button>
+
+    <div class="row">
+      <div class="col s12">
+        <div class="input-field">
+          <textarea readonly id="stdout" class="materialize-textarea"></textarea>
+          <label for="stdout">STDOUT</label>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Add Materialize JavaScript CDN -->
