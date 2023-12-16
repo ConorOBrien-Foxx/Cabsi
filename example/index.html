@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dark Theme Webpage</title>
+  <script src="https://code.jquery.com/jquery-3.7.1.slim.min.js"></script>
+  <!-- Add Materialize CSS CDN -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <header>
+    <h1>Cabsi</h1>
+  </header>
+
+  <div class="container">
+    <div class="row">
+      <div class="col s12">
+        <div class="input-field">
+          <textarea class="materialize-textarea"></textarea>
+          <label for="textarea1">Code</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col s12">
+        <div class="input-field">
+          <textarea class="materialize-textarea"></textarea>
+          <label for="textarea2">STDIN</label>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn waves-effect waves-light" id="runButton">
+      <i class="material-icons left">start</i> Run
+    </button>
+  </div>
+
+  <!-- Add Materialize JavaScript CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+  <script>
+    // fix materializecss bouncing in textarea on input
+    // the js listens on keyup and keydown, but keyup doesn't update with the correct value
+    // the better event to use is "input", which triggers at the same time as keyup, but
+    // instead has the input properly initialized
+    window.addEventListener("load", () => {
+      for(let textarea of document.querySelectorAll("textarea")) {
+        textarea.addEventListener("input", (ev) => {
+          M.textareaAutoResize(ev.target);
+        });
+      }
+    });
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,79 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono&family=Roboto&family=Silkscreen&display=swap');
+ 
+:root {
+  --background-color: #1a1a1a;
+  --text-color: #EEEEEE;
+  --header-color: #423A1A;
+  --header-text-color: #ECD25C;
+  
+  --button-bg-color: #8f3c2c;
+  --button-bg-color-light: #c2513c;
+  --button-bg-color-dark: #7c3426;
+  --button-text-color: #EEEEEE;
+}
+
+textarea, code, pre, input {
+  font-family: "IBM Plex Mono", monospace;
+}
+
+body, button {
+  font-family: "Roboto", sans-serif;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: "Silkscreen", "IBM Plex Mono", monospace;
+}
+
+body {
+  background-color: var(--background-color);
+  color: var(--text-color);
+}
+
+header {
+  background-color: var(--header-color);
+  color: var(--header-text-color);
+  padding: 10px;
+  text-align: center;
+}
+
+.container {
+  padding: 20px;
+  text-align: center;
+}
+
+textarea {
+  margin-bottom: 10px;
+  color: var(--text-color);
+}
+
+.input-field textarea:focus {
+  border-bottom: 1px solid var(--button-bg-color-light) !important;
+  box-shadow: 0 1px 0 0 var(--button-bg-color-light) !important;
+}
+.input-field textarea:focus + label {
+  color: var(--button-bg-color-light) !important;
+}
+
+header h1 {
+   margin: 0; 
+}
+
+.btn {
+  background-color: var(--button-bg-color);
+  color: var(--button-text-color);
+}
+.btn:focus {
+  background-color: var(--button-bg-color-dark);
+}
+.btn:hover {
+  background-color: var(--button-bg-color-light);  
+}
+
+#runButton .material-icons {
+  font-size: 30px;
+}
+
+/* Ensure the box-sizing property includes padding and borders in the element's total width and height */
+* {
+    box-sizing: border-box;
+}
