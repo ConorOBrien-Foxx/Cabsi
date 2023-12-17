@@ -109,6 +109,7 @@ class CabsiInterpreter {
     constructor(tokens) {
         this.tokens = tokens;
         this.iptr = 0;
+        this.killed = false;
         this.stack = [];
         this.callStack = [];
         this.registerStack = [];
@@ -237,9 +238,23 @@ class CabsiInterpreter {
     }
     
     async run() {
-        while(this.iptr < this.tokens.length) {
+        while(this.isRunning()) {
             await this.step();
         }
+    }
+    
+    async runNonBlocking() {
+        return new Promise((resolve, reject) => {
+            const stepRecur = () => {
+                if(!this.isRunning()) {
+                    return resolve(this.killed);
+                }
+                this.step().then(() => {
+                    setTimeout(stepRecur, this.stepSpeed ?? 0);
+                });
+            };
+            stepRecur();
+        });
     }
     
     parseReferenceExpression(expression) {
@@ -616,7 +631,7 @@ class CabsiInterpreter {
             if(!this.hasStackSize(1)) {
                 return;
             }
-            console.log(this.stack.pop());
+            this.write(this.stack.pop() + "\n");
         },
         [Instructions.EXIT]() {
             this.kill();
@@ -625,7 +640,12 @@ class CabsiInterpreter {
     
     kill() {
         this.iptr = this.tokens.length;
+        this.killed = true;
         this.rl?.close();
+    }
+    
+    isRunning() {
+        return this.iptr < this.tokens.length && !this.killed;
     }
     
     static fromString(code) {
@@ -663,6 +683,8 @@ if(typeof require !== "undefined") {
 if(typeof window !== "undefined") {
     window.addEventListener("load", function () {
         const runButton = document.getElementById("runButton");
+        const runButtonTimeout = document.getElementById("runButtonTimeout");
+        const runButtonTimeoutIcon = runButtonTimeout.querySelector("i");
         const codeInput = document.getElementById("codeInput");
         const stdin = document.getElementById("stdin");
         const stdout = document.getElementById("stdout");
@@ -676,7 +698,7 @@ if(typeof window !== "undefined") {
         stdout.value = "";
         resizeStdout();
         
-        runButton.addEventListener("click", async function () {
+        const browserInterpreter = () => {
             stdout.value = "";
             const interpreter = CabsiInterpreter.fromString(codeInput.value);
             // set browser configuration
@@ -689,10 +711,34 @@ if(typeof window !== "undefined") {
                 let { lineNumber, instruction } = this.token;
                 this.write(`${lineNumber} ${instruction} ${formatStack(this.stack)} / ${formatStack(this.registerStack)}\n`);
             };
-            // run and kill
-            // TODO: not-busy-run
+            return interpreter;
+        };
+        
+        runButton.addEventListener("click", async function () {
+            const interpreter = browserInterpreter();
             await interpreter.run();
             interpreter.kill();
         });
+        
+        let timeoutInterpreter;
+        const toggleTimeoutInterpreter = () => {
+            if(timeoutInterpreter) {
+                timeoutInterpreter.kill();
+                runButtonTimeoutIcon.textContent = "hourglass_empty";
+                runButtonTimeout.childNodes[2].textContent = "Run Timeout";
+                timeoutInterpreter = null;
+            }
+            else {
+                timeoutInterpreter = browserInterpreter();
+                runButtonTimeoutIcon.textContent = "cancel";
+                runButtonTimeout.childNodes[2].textContent = "Cancel";
+                timeoutInterpreter.runNonBlocking().then(killed => {
+                    if(!killed) {
+                        toggleTimeoutInterpreter();
+                    }
+                });
+            }
+        };
+        runButtonTimeout.addEventListener("click", toggleTimeoutInterpreter);
     });
 }
