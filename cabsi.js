@@ -689,14 +689,67 @@ if(typeof window !== "undefined") {
         const stdin = document.getElementById("stdin");
         const stdout = document.getElementById("stdout");
         const stdoutLabel = document.querySelector("label[for=stdout]");
-        const resizeStdout = () => {
-            M.textareaAutoResize(stdout);
-            stdoutLabel.classList.toggle("active", !!stdout.value.length);
+        const resizeTextarea = (textarea) => {
+            M.textareaAutoResize(textarea);
+            textarea.parentElement
+                .querySelector("label")
+                .classList.toggle("active", !!textarea.value.length);
         };
         const formatStack = stack => `[${stack.join(", ")}]`;
         
+        const encodeData = data =>
+            data.replace(/[\s\S]/g, byt => {
+                if(/[A-Za-v0-9]/.test(byt)) {
+                    return byt;
+                }
+                // wxyz
+                else {
+                    let baseRep = byt.charCodeAt(0).toString(36);
+                    if(baseRep.length > 4) {
+                        console.error("Cannot encode!!");
+                    }
+                    let indicator = "wxyz"[baseRep.length - 1];
+                    return indicator + baseRep;
+                }
+            });
+        
+        const decodeData = data =>
+            data.replace(/w(.)|x(..)|y(...)|z(....)/g, (match, wGroup, xGroup, yGroup, zGroup) =>
+                String.fromCharCode(
+                    parseInt(
+                        wGroup || xGroup || yGroup || zGroup,
+                        36
+                    )
+                )
+            );
+        
+        if(window.location.search) {
+            let params = window.location.search.slice(1).split("&");
+            console.log(params);
+            let parsed = {};
+            for(let param of params) {
+                let eqIndex = param.indexOf("=");
+                let ident = param.slice(0, eqIndex);
+                let value = param.slice(eqIndex + 1);
+                parsed[ident] = decodeData(value);
+            }
+            codeInput.value = parsed.code;
+            stdin.value = parsed.input;
+            resizeTextarea(codeInput);
+            resizeTextarea(stdin);
+        }
+        
         stdout.value = "";
-        resizeStdout();
+        resizeTextarea(stdout);
+        
+        const updateSaveURL = () => {
+            // let contentToSave = JSON.stringify([codeInput.value, stdin.value]);
+            // let encoded = encodeData(contentToSave);
+            const newString = `?code=${encodeData(codeInput.value)}&input=${encodeData(stdin.value)}`;
+            window.history.replaceState(null, null, newString);
+        };
+        codeInput.addEventListener("input", updateSaveURL);
+        stdin.addEventListener("input", updateSaveURL);
         
         const browserInterpreter = () => {
             stdout.value = "";
@@ -705,7 +758,7 @@ if(typeof window !== "undefined") {
             interpreter.useStringInput(stdin.value);
             interpreter.useFunctionOutput(arg => {
                 stdout.value += arg;
-                resizeStdout();
+                resizeTextarea(stdout);
             });
             interpreter.instructionMap[Instructions.DEBUG] = function () {
                 let { lineNumber, instruction } = this.token;
